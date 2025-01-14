@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# examples run time
+*_out*
+
 # Distribution / packaging
 .Python
 build/
@@ -141,3 +144,16 @@ cython_debug/
 
 # VSCode specific settings
 .vscode
+
+
+.run_log_store/
+
+.catalog/
+
+cov.xml
+
+.DS_Store
+
+data/
+
+minikube/

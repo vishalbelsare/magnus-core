@@ -1,0 +1,18 @@
+pipeline-executor:
+  type: "argo" # (1)
+  config:
+    image: harbor.csis.astrazeneca.net/mlops/runnable:latest # (2)
+    service_account_name: default-editor
+    persistent_volumes: # (3)
+      - name: magnus-volume
+        mount_path: /mnt
+
+run-log-store: # (4)
+  type: chunked-fs
+  # config:
+  #   log_folder: /mnt/run_log_store
+
+catalog:
+  type: file-system
+  # config:
+  #  catalog_location: /mnt/catalog

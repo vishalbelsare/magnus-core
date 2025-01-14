@@ -1,0 +1,44 @@
+job-executor:
+  type: "k8s-job"
+  config:
+    pvc_claim_name: runnable
+    config_path:
+    mock: false
+    namespace: enterprise-mlops
+    jobSpec:
+      # activeDeadlineSeconds: Optional[int]
+      # selector: Optional[LabelSelector]
+      # ttlSecondsAfterFinished: Optional[int]
+      template:
+        # metadata:
+          # annotations: Optional[Dict[str, str]]
+          # generate_name: Optional[str] = run_id
+        spec:
+          # activeDeadlineSeconds: Optional[int]
+          # nodeSelector: Optional[Dict[str, str]]
+          # tolerations: Optional[List[Toleration]]
+          # volumes:
+          #   - name: str
+          #     hostPath:
+          #       path: str
+          # serviceAccountName: Optional[str]
+          # restartPolicy: Optional[str] = Choose from [Always, OnFailure, Never]
+          container:
+            # command: List[str]
+            # env:
+            #     - name: str
+            #       value: str
+            image: harbor.csis.astrazeneca.net/mlops/runnable:latest
+            # imagePullPolicy: Optional[str] = choose from [Always, Never, IfNotPresent]
+            # resources:
+            #   limits:
+            #     cpu: str
+            #     memory: str
+            #     gpu: str
+            #   requests:
+            #     cpu: str
+            #     memory: str
+            #     gpu: str
+            # volumeMounts:
+            #   - name: str
+            #     mountPath: str

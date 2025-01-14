@@ -1,0 +1,10 @@
+docs/
+.github/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.tox/
+.scripts/
+.tests/
+.venv/
+minikube/
