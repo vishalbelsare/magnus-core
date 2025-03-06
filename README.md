@@ -1,339 +1,234 @@
-# Hello from magnus
 
 
-![logo](docs/assets/logo1.png)
+
+
+
+</p>
+<hr style="border:2px dotted orange">
+
+<p align="center">
+<a href="https://pypi.org/project/runnable/"><img alt="python:" src="https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue.svg"></a>
+<a href="https://pypi.org/project/runnable/"><img alt="Pypi" src="https://badge.fury.io/py/runnable.svg"></a>
+<a href="https://github.com/vijayvammi/runnable/blob/main/LICENSE"><img alt"License" src="https://img.shields.io/badge/license-Apache%202.0-blue.svg"></a>
+<a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+<a href="https://github.com/python/mypy"><img alt="MyPy Checked" src="https://www.mypy-lang.org/static/mypy_badge.svg"></a>
+<a href="https://github.com/vijayvammi/runnable/actions/workflows/release.yaml"><img alt="Tests:" src="https://github.com/vijayvammi/runnable/actions/workflows/release.yaml/badge.svg">
+</p>
+<hr style="border:2px dotted orange">
+
+
+[Please check here for complete documentation](https://astrazeneca.github.io/runnable/)
+
+## Example
+
+The below data science flavored code is a well-known
+[iris example from scikit-learn](https://scikit-learn.org/stable/auto_examples/linear_model/plot_iris_logistic.html).
+
+
+```python
+"""
+Example of Logistic regression using scikit-learn
+https://scikit-learn.org/stable/auto_examples/linear_model/plot_iris_logistic.html
+"""
+
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn import datasets
+from sklearn.inspection import DecisionBoundaryDisplay
+from sklearn.linear_model import LogisticRegression
+
+
+def load_data():
+    # import some data to play with
+    iris = datasets.load_iris()
+    X = iris.data[:, :2]  # we only take the first two features.
+    Y = iris.target
+
+    return X, Y
+
+
+def model_fit(X: np.ndarray, Y: np.ndarray, C: float = 1e5):
+    logreg = LogisticRegression(C=C)
+    logreg.fit(X, Y)
+
+    return logreg
+
+
+def generate_plots(X: np.ndarray, Y: np.ndarray, logreg: LogisticRegression):
+    _, ax = plt.subplots(figsize=(4, 3))
+    DecisionBoundaryDisplay.from_estimator(
+        logreg,
+        X,
+        cmap=plt.cm.Paired,
+        ax=ax,
+        response_method="predict",
+        plot_method="pcolormesh",
+        shading="auto",
+        xlabel="Sepal length",
+        ylabel="Sepal width",
+        eps=0.5,
+    )
+
+    # Plot also the training points
+    plt.scatter(X[:, 0], X[:, 1], c=Y, edgecolors="k", cmap=plt.cm.Paired)
+
+    plt.xticks(())
+    plt.yticks(())
+
+    plt.savefig("iris_logistic.png")
+
+    # TODO: What is the right value?
+    return 0.6
+
+
+## Without any orchestration
+def main():
+    X, Y = load_data()
+    logreg = model_fit(X, Y, C=1.0)
+    generate_plots(X, Y, logreg)
+
+
+## With runnable orchestration
+def runnable_pipeline():
+    # The below code can be anywhere
+    from runnable import Catalog, Pipeline, PythonTask, metric, pickled
+
+    # X, Y = load_data()
+    load_data_task = PythonTask(
+        function=load_data,
+        name="load_data",
+        returns=[pickled("X"), pickled("Y")],  # (1)
+    )
+
+    # logreg = model_fit(X, Y, C=1.0)
+    model_fit_task = PythonTask(
+        function=model_fit,
+        name="model_fit",
+        returns=[pickled("logreg")],
+    )
+
+    # generate_plots(X, Y, logreg)
+    generate_plots_task = PythonTask(
+        function=generate_plots,
+        name="generate_plots",
+        terminate_with_success=True,
+        catalog=Catalog(put=["iris_logistic.png"]),  # (2)
+        returns=[metric("score")],
+    )
+
+    pipeline = Pipeline(
+        steps=[load_data_task, model_fit_task, generate_plots_task],
+    )  # (4)
+
+    pipeline.execute()
+
+    return pipeline
+
+
+if __name__ == "__main__":
+    # main()
+    runnable_pipeline()
+
+```
+
+
+1. Return two serialized objects X and Y.
+2. Store the file `iris_logistic.png` for future reference.
+3. Define the sequence of tasks.
+4. Define a pipeline with the tasks
+
+The difference between native driver and runnable orchestration:
+
+!!! tip inline end "Notebooks and Shell scripts"
+
+    You can execute notebooks and shell scripts too!!
+
+    They can be written just as you would want them, *plain old notebooks and scripts*.
+
+
+
+
+<div class="annotate" markdown>
+
+```diff
+
+- X, Y = load_data()
++load_data_task = PythonTask(
++    function=load_data,
++     name="load_data",
++     returns=[pickled("X"), pickled("Y")], (1)
++    )
+
+-logreg = model_fit(X, Y, C=1.0)
++model_fit_task = PythonTask(
++   function=model_fit,
++   name="model_fit",
++   returns=[pickled("logreg")],
++   )
+
+-generate_plots(X, Y, logreg)
++generate_plots_task = PythonTask(
++   function=generate_plots,
++   name="generate_plots",
++   terminate_with_success=True,
++   catalog=Catalog(put=["iris_logistic.png"]), (2)
++   )
+
+
++pipeline = Pipeline(
++   steps=[load_data_task, model_fit_task, generate_plots_task], (3)
+
+```
+</div>
+
+
 ---
 
-**Magnus** is a *thin* layer of abstraction over the underlying infrastructure to enable data scientist and
-machine learning engineers. It provides:
-
-- A way to execute Jupyter notebooks/python functions in local or remote platforms.
-- A framework to define complex pipelines via YAML or Python SDK.
-- Robust and *automatic* logging to ensure maximum reproducibility of experiments.
-- A framework to interact with secret managers ranging from environment variables to other vendors.
-- Interactions with various experiment tracking tools.
-
-## What does **thin** mean?
-
-- We really have no say in what happens within your notebooks or python functions.
-- We do not dictate how the infrastructure should be configured as long as it satisfies some *basic* criteria.
-    - The underlying infrastructure should support container execution and an orchestration framework.
-    - Some way to handle secrets either via environment variables or secrets manager.
-    - A blob storage or some way to store your intermediate artifacts.
-    - A database or blob storage to store logs.
-- We have no opinion of how your structure your project.
-- We do not creep into your CI/CD practices but it is your responsibility to provide the same environment where ever
-the execution happens. This is usually via git, virtual environment manager and docker.
-- We transpile to the orchestration framework that is used by your teams to do the heavy lifting.
-
-## What does it do?
-
-
-![works](docs/assets/work.png)
-
-### Shift Left
-
-Magnus provides patterns typically used in production environments even in the development phase.
-
-- Reduces the need for code refactoring during production phase of the project.
-- Enables best practices and understanding of infrastructure patterns.
-- Run the same code on your local machines or in production environments.
-
-:sparkles::sparkles:Happy Experimenting!!:sparkles::sparkles:
+- [x] ```Domain``` code remains completely independent of ```driver``` code.
+- [x] The ```driver``` function has an equivalent and intuitive runnable expression
+- [x] Reproducible by default, runnable stores metadata about code/data/config for every execution.
+- [x] The pipeline is `runnable` in any environment.
 
 
 ## Documentation
 
-[More details about the project and how to use it available here](https://astrazeneca.github.io/magnus-core/).
+[More details about the project and how to use it available here](https://astrazeneca.github.io/runnable/).
+
+<hr style="border:2px dotted orange">
 
 ## Installation
 
-
-The minimum python version that magnus supports is 3.8
-## pip
-
-magnus is a python package and should be installed as any other.
+The minimum python version that runnable supports is 3.8
 
 ```shell
-pip install magnus
+pip install runnable
 ```
 
-We recommend that you install magnus in a virtual environment specific to the project and also poetry for your
-application development.
-
-The command to install in a poetry managed virtual environment
-
-```
-poetry add magnus
-```
-
-## Example Run
-
-To give you a flavour of how magnus works, lets create a simple pipeline.
-
-Copy the contents of this yaml into getting-started.yaml or alternatively in a python file if you are using the SDK.
-
----
-!!! Note
-
-   The below execution would create a folder called 'data' in the current working directory.
-   The command as given should work in linux/macOS but for windows, please change accordingly.
-
----
-
-``` yaml
-dag:
-  description: Getting started
-  start_at: step parameters
-  steps:
-    step parameters:
-      type: task
-      command_type: python-lambda
-      command: "lambda x: {'x': int(x) + 1}"
-      next: step shell
-    step shell:
-      type: task
-      command_type: shell
-      command: mkdir data ; env >> data/data.txt # For Linux/macOS
-      next: success
-      catalog:
-        put:
-          - "*"
-    success:
-      type: success
-    fail:
-      type: fail
-```
-
-The same could also be defined via a Python SDK.
-
-```python
-
-#in pipeline.py
-from magnus import Pipeline, Task
-
-def pipeline():
-    first = Task(name='step parameters', command="lambda x: {'x': int(x) + 1}", command_type='python-lambda',
-                next_node='step shell')
-    second = Task(name='step shell', command='mkdir data ; env >> data/data.txt',
-                  command_type='shell', catalog={'put': '*'})
-
-    pipeline = Pipeline(name='getting_started')
-    pipeline.construct([first, second])
-    pipeline.execute(parameters_file='parameters.yaml')
-
-if __name__ == '__main__':
-    pipeline()
-
-```
-
-Since the pipeline expects a parameter ```x```, lets provide that using ```parameters.yaml```
-
-```yaml
-x: 3
-```
+Please look at the [installation guide](https://astrazeneca.github.io/runnable-core/usage)
+for more information.
 
 
-And let's run the pipeline using:
-``` shell
- magnus execute --file getting-started.yaml --parameters-file parameters.yaml
-```
+## Pipelines can be:
 
-If you are using the python SDK:
+### Linear
 
-```
-poetry run python pipeline.py
-```
+A simple linear pipeline with tasks either
+[python functions](https://astrazeneca.github.io/runnable-core/concepts/task/#python_functions),
+[notebooks](https://astrazeneca.github.io/runnable-core/concepts/task/#notebooks), or [shell scripts](https://astrazeneca.github.io/runnable-core/concepts/task/#shell)
 
-You should see a list of warnings but your terminal output should look something similar to this:
+[![](https://mermaid.ink/img/pako:eNpl0bFuwyAQBuBXQVdZTqTESpxMDJ0ytkszhgwnOCcoNo4OaFVZfvcSx20tGSQ4fn0wHB3o1hBIyLJOWGeDFJ3Iq7r90lfkkA9HHfmTUpnX1hFyLvrHzDLl_qB4-1BOOZGGD3TfSikvTDSNFqdj2sT2vBTr9euQlXNWjqycsN2c7UZWFMUE7udwP0L3y6JenNKiyfvz8t8_b-gavT9QJYY0PcDtjeTLptrAChriBq1JzeoeWkG4UkMKZCoN8k2Bcn1yGEN7_HYaZOBIK4h3g4EOFi-MDcgKa59SMja0_P7s_vAJ_Q_YOH6o?type=png)](https://mermaid.live/edit#pako:eNpl0bFuwyAQBuBXQVdZTqTESpxMDJ0ytkszhgwnOCcoNo4OaFVZfvcSx20tGSQ4fn0wHB3o1hBIyLJOWGeDFJ3Iq7r90lfkkA9HHfmTUpnX1hFyLvrHzDLl_qB4-1BOOZGGD3TfSikvTDSNFqdj2sT2vBTr9euQlXNWjqycsN2c7UZWFMUE7udwP0L3y6JenNKiyfvz8t8_b-gavT9QJYY0PcDtjeTLptrAChriBq1JzeoeWkG4UkMKZCoN8k2Bcn1yGEN7_HYaZOBIK4h3g4EOFi-MDcgKa59SMja0_P7s_vAJ_Q_YOH6o)
 
-``` json
-{
-    "run_id": "20230131195647",
-    "dag_hash": "",
-    "use_cached": false,
-    "tag": "",
-    "original_run_id": "",
-    "status": "SUCCESS",
-    "steps": {
-        "step parameters": {
-            "name": "step parameters",
-            "internal_name": "step parameters",
-            "status": "SUCCESS",
-            "step_type": "task",
-            "message": "",
-            "mock": false,
-            "code_identities": [
-                {
-                    "code_identifier": "e15d1374aac217f649972d11fe772e61b5a2478d",
-                    "code_identifier_type": "git",
-                    "code_identifier_dependable": true,
-                    "code_identifier_url": "INTENTIONALLY REMOVED",
-                    "code_identifier_message": ""
-                }
-            ],
-            "attempts": [
-                {
-                    "attempt_number": 0,
-                    "start_time": "2023-01-31 19:56:55.007931",
-                    "end_time": "2023-01-31 19:56:55.009273",
-                    "duration": "0:00:00.001342",
-                    "status": "SUCCESS",
-                    "message": ""
-                }
-            ],
-            "user_defined_metrics": {},
-            "branches": {},
-            "data_catalog": []
-        },
-        "step shell": {
-            "name": "step shell",
-            "internal_name": "step shell",
-            "status": "SUCCESS",
-            "step_type": "task",
-            "message": "",
-            "mock": false,
-            "code_identities": [
-                {
-                    "code_identifier": "e15d1374aac217f649972d11fe772e61b5a2478d",
-                    "code_identifier_type": "git",
-                    "code_identifier_dependable": true,
-                    "code_identifier_url": "INTENTIONALLY REMOVED",
-                    "code_identifier_message": ""
-                }
-            ],
-            "attempts": [
-                {
-                    "attempt_number": 0,
-                    "start_time": "2023-01-31 19:56:55.128697",
-                    "end_time": "2023-01-31 19:56:55.150878",
-                    "duration": "0:00:00.022181",
-                    "status": "SUCCESS",
-                    "message": ""
-                }
-            ],
-            "user_defined_metrics": {},
-            "branches": {},
-            "data_catalog": [
-                {
-                    "name": "data/data.txt",
-                    "data_hash": "7e91b0a9ff8841a3b5bf2c711f58bcc0cbb6a7f85b9bc92aa65e78cdda59a96e",
-                    "catalog_relative_path": "20230131195647/data/data.txt",
-                    "catalog_handler_location": ".catalog",
-                    "stage": "put"
-                }
-            ]
-        },
-        "success": {
-            "name": "success",
-            "internal_name": "success",
-            "status": "SUCCESS",
-            "step_type": "success",
-            "message": "",
-            "mock": false,
-            "code_identities": [
-                {
-                    "code_identifier": "e15d1374aac217f649972d11fe772e61b5a2478d",
-                    "code_identifier_type": "git",
-                    "code_identifier_dependable": true,
-                    "code_identifier_url": "INTENTIONALLY REMOVED",
-                    "code_identifier_message": ""
-                }
-            ],
-            "attempts": [
-                {
-                    "attempt_number": 0,
-                    "start_time": "2023-01-31 19:56:55.239877",
-                    "end_time": "2023-01-31 19:56:55.240116",
-                    "duration": "0:00:00.000239",
-                    "status": "SUCCESS",
-                    "message": ""
-                }
-            ],
-            "user_defined_metrics": {},
-            "branches": {},
-            "data_catalog": []
-        }
-    },
-    "parameters": {
-        "x": 4
-    },
-    "run_config": {
-        "executor": {
-            "type": "local",
-            "config": {
-                "enable_parallel": false,
-                "placeholders": {}
-            }
-        },
-        "run_log_store": {
-            "type": "buffered",
-            "config": {}
-        },
-        "catalog": {
-            "type": "file-system",
-            "config": {
-                "compute_data_folder": "data",
-                "catalog_location": ".catalog"
-            }
-        },
-        "secrets": {
-            "type": "do-nothing",
-            "config": {}
-        },
-        "experiment_tracker": {
-            "type": "do-nothing",
-            "config": {}
-        },
-        "variables": {},
-        "pipeline": {
-            "start_at": "step parameters",
-            "name": "getting_started",
-            "description": "",
-            "max_time": 86400,
-            "steps": {
-                "step parameters": {
-                    "mode_config": {},
-                    "next_node": "step shell",
-                    "command": "lambda x: {'x': int(x) + 1}",
-                    "command_type": "python-lambda",
-                    "command_config": {},
-                    "catalog": {},
-                    "retry": 1,
-                    "on_failure": "",
-                    "type": "task"
-                },
-                "step shell": {
-                    "mode_config": {},
-                    "next_node": "success",
-                    "command": "mkdir data ; env >> data/data.txt",
-                    "command_type": "shell",
-                    "command_config": {},
-                    "catalog": {
-                        "put": "*"
-                    },
-                    "retry": 1,
-                    "on_failure": "",
-                    "type": "task"
-                },
-                "success": {
-                    "mode_config": {},
-                    "type": "success"
-                },
-                "fail": {
-                    "mode_config": {},
-                    "type": "fail"
-                }
-            }
-        }
-    }
-}
-```
+### [Parallel branches](https://astrazeneca.github.io/runnable-core/concepts/parallel)
 
-You should see that ```data``` folder being created with a file called ```data.txt``` in it.
-This is according to the command in ```step shell```.
+Execute branches in parallel
 
-You should also see a folder ```.catalog``` being created with a single folder corresponding to the run_id of this run.
+[![](https://mermaid.ink/img/pako:eNp9k01rwzAMhv-K8S4ZtJCzDzuMLmWwwkh2KMQ7eImShiZ2sB1KKf3vs52PpsWNT7LySHqlyBeciRwwwUUtTtmBSY2-YsopR8MpQUfAdCdBBekWNBpvv6-EkFICzGAtWcUTDW3wYy20M7lr5QGBK2j-anBAkH4M1z6grnjpy17xAiTwDII07jj6HK8-VnVZBspITnpjztyoVkLLJOy3Qfrdm6gQEu2370Io7WLORo84PbRoA_oOl9BBg4UHbHR58UkMWq_fxjrOnhLRx1nH0SgkjlBjh7ekxNKGc0NelDLknhePI8qf7MVNr_31nm1wwNTeM2Ao6pmf-3y3Mp7WlqA7twOnXfKs17zt-6azmim1gQL1A0NKS3EE8hKZE4Yezm3chIVFiFe4AdmwKjdv7mIjKNYHaIBiYsycySPFlF8NxzotkjPPMNGygxXu2pxp2FSslKzBpGC1Ml7IKy3krn_E7i1f_wEayTcn?type=png)](https://mermaid.live/edit#pako:eNp9k01rwzAMhv-K8S4ZtJCzDzuMLmWwwkh2KMQ7eImShiZ2sB1KKf3vs52PpsWNT7LySHqlyBeciRwwwUUtTtmBSY2-YsopR8MpQUfAdCdBBekWNBpvv6-EkFICzGAtWcUTDW3wYy20M7lr5QGBK2j-anBAkH4M1z6grnjpy17xAiTwDII07jj6HK8-VnVZBspITnpjztyoVkLLJOy3Qfrdm6gQEu2370Io7WLORo84PbRoA_oOl9BBg4UHbHR58UkMWq_fxjrOnhLRx1nH0SgkjlBjh7ekxNKGc0NelDLknhePI8qf7MVNr_31nm1wwNTeM2Ao6pmf-3y3Mp7WlqA7twOnXfKs17zt-6azmim1gQL1A0NKS3EE8hKZE4Yezm3chIVFiFe4AdmwKjdv7mIjKNYHaIBiYsycySPFlF8NxzotkjPPMNGygxXu2pxp2FSslKzBpGC1Ml7IKy3krn_E7i1f_wEayTcn)
 
-To understand more about the input and output, please head over to the
-[documentation](https://project-magnus.github.io/magnus-core/).
+### [loops or map](https://astrazeneca.github.io/runnable-core/concepts/map)
+
+Execute a pipeline over an iterable parameter.
+
+[![](https://mermaid.ink/img/pako:eNqVlF1rwjAUhv9KyG4qKNR-3AS2m8nuBgN3Z0Sy5tQG20SSdE7E_76kVVEr2CY3Ied9Tx6Sk3PAmeKACc5LtcsKpi36nlGZFbXciHwfLN79CuWiBLMcEULWGkBSaeosA2OCxbxdXMd89Get2bZASsLiSyuvQE2mJZXIjW27t2rOmQZ3Gp9rD6UjatWnwy7q6zPPukd50WTydmemEiS_QbQ79RwxGoQY9UaMuojRA8TCXexzyHgQZNwbMu5Cxl3IXNX6OWMyiDHpzZh0GZMHjOK3xz2mgxjT3oxplzG9MPp5_nVOhwJjteDwOg3HyFj3L1dCcvh7DUc-iftX18n6Waet1xX8cG908vpKHO6OW7cvkeHm5GR2b3drdvaSGTODHLW37mxabYC8fLgRhlfxpjNdwmEets-Dx7gCXTHBXQc8-D2KbQEVUEzckjO9oZjKo9Ox2qr5XmaYWF3DGNdbzizMBHOVVWGSs9K4XeDCKv3ZttSmsx7_AYa341E?type=png)](https://mermaid.live/edit#pako:eNqVlF1rwjAUhv9KyG4qKNR-3AS2m8nuBgN3Z0Sy5tQG20SSdE7E_76kVVEr2CY3Ied9Tx6Sk3PAmeKACc5LtcsKpi36nlGZFbXciHwfLN79CuWiBLMcEULWGkBSaeosA2OCxbxdXMd89Get2bZASsLiSyuvQE2mJZXIjW27t2rOmQZ3Gp9rD6UjatWnwy7q6zPPukd50WTydmemEiS_QbQ79RwxGoQY9UaMuojRA8TCXexzyHgQZNwbMu5Cxl3IXNX6OWMyiDHpzZh0GZMHjOK3xz2mgxjT3oxplzG9MPp5_nVOhwJjteDwOg3HyFj3L1dCcvh7DUc-iftX18n6Waet1xX8cG908vpKHO6OW7cvkeHm5GR2b3drdvaSGTODHLW37mxabYC8fLgRhlfxpjNdwmEets-Dx7gCXTHBXQc8-D2KbQEVUEzckjO9oZjKo9Ox2qr5XmaYWF3DGNdbzizMBHOVVWGSs9K4XeDCKv3ZttSmsx7_AYa341E)
+
+### [Arbitrary nesting](https://astrazeneca.github.io/runnable-core/concepts/nesting/)
+Any nesting of parallel within map and so on.

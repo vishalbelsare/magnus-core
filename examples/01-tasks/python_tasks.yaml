@@ -1,0 +1,13 @@
+dag:
+  description: |
+    You can run this pipeline by:
+       runnable execute -f examples/01-tasks/python_tasks.yaml
+
+       The stdout of "Hello World!" would be captured as
+       execution log and stored in the catalog.
+  start_at: hello
+  steps:
+    hello:
+      type: task
+      command: examples.common.functions.hello # dotted path to the function.
+      next: success

@@ -1,0 +1,20 @@
+dag:
+  description: |
+    This is a sample pipeline with one step that executes a notebook.
+
+    The notebook is executed in the same environment so any installed
+    packages are available for the notebook.
+
+    Upon successful execution, the output notebook with cell outputs
+    is stored in the catalog.
+
+    You can run this pipeline as:
+      runnable execute -f examples/01-tasks/notebook.yaml
+
+  start_at: hello
+  steps:
+    hello:
+      type: task
+      command_type: notebook
+      command: examples/common/simple_notebook.ipynb # The path is relative to the root of the project.
+      next: success

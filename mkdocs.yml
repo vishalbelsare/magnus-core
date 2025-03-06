@@ -1,12 +1,19 @@
-site_name: Magnus
+site_name: runnable
 site_description: "Pipelines made easy"
+strict: false
+repo_url: https://github.com/AstraZeneca/runnable
+
+
+# TODO: Set up versioning
 
 docs_dir: "docs"
 theme:
-  logo: assets/logo.png
-  favicon: assets/favicon.png
+  logo: assets/sport.png
+  favicon: assets/sport.png
   name: material
-  font: false
+  font:
+    code: Roboto Mono
+    text: Roboto
   shortcuts:
     help: 191 # ?
     next: 78 # n
@@ -14,82 +21,119 @@ theme:
     search: 83 # s
   palette:
     - scheme: default
-      primary: teal
-      accent: amber
+      primary: amber
+      accent: red
       toggle:
         icon: material/lightbulb-outline
         name: Switch to dark mode
     - scheme: slate
-      primary: teal
-      accent: amber
+      primary: amber
+      accent: red
       toggle:
         icon: material/lightbulb
         name: Switch to light mode
   features:
-    - tabs
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - header.autohide
     - navigation.top
+    - toc.follow
     - toc.integrate
     - search.suggest
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.footer
+    # - navigation.indexes
 
 # Extensions
 markdown_extensions:
-  - pymdownx.snippets:
-      base_path: "docs"
+  - mkdocs-click
   - admonition
-  - codehilite
+  - def_list
+  - attr_list
+  - md_in_html
+  - pymdownx.details
   - footnotes
-  - pymdownx.highlight
-  - pymdownx.superfences
+  - tables
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets:
+      base_path: "."
+      # dedent_subsections: true
+  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - toc:
       permalink: true
       separator: "_"
       toc_depth: 2
-  - attr_list
-  - md_in_html
 
 plugins:
   - search
+  - section-index
+  - mkdocstrings:
+      enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
+      default_handler: python
+      handlers:
+        python:
+          options:
+            show_source: false
+            docstring_section_style: list
+            allow_inspection: false
+            show_signature_annotations: true
+            separate_signature: true
+
+# extra_javascript:
+#   - https://unpkg.com/mermaid@9.2/dist/mermaid.min.js
+
+extra_css:
+  - css/extra.css
 
 nav:
-  - "Home": "index.md"
-  - "Getting started":
-      - "Installation": "getting_started/installation.md"
-      - "Example Run": "getting_started/example.md"
-      - "Explanation - input": "getting_started/brief-concepts-input.md"
-      - "Explanation - output": "getting_started/brief-concepts-output.md"
-      - "Example Deployment": "getting_started/example-deployment.md"
-      - "Wrap up": "getting_started/wrap-up.md"
-      - "Why magnus": "getting_started/why-magnus.md"
+  - "runnable":
+      - "Introduction": "index.md"
+      - "Usage": "usage.md"
+      - "Why runnable?": "why-runnable.md"
   - "Concepts":
-      - "Node": "concepts/nodes.md"
-      - "Command types": "concepts/command-types.md"
-      - "Dag": "concepts/dag.md"
-      - "Catalog":
-          - "Overview": "concepts/catalog.md"
-          - "Do Nothing Catalog": "concepts/catalog-implementations/do-nothing.md"
-          - "File System": "concepts/catalog-implementations/file-system.md"
-      - "Secrets":
-          - "Overview": "concepts/secrets.md"
-          - "Dot Env": "concepts/secrets-implementations/dot-env.md"
-          - "Do Nothing": "concepts/secrets-implementations/do-nothing.md"
-          - "Env Secrets Manager": "concepts/secrets-implementations/env-secrets-manager.md"
-      - "Run Log":
-          - "Overview": "concepts/run-log.md"
-          - "Buffered": "concepts/run-log-implementations/bufferred.md"
-          - "File System": "concepts/run-log-implementations/file-system.md"
-      - "Experiment Tracking":
-          - "Overview": "concepts/experiment-tracking.md"
-      - "Integration":
-          - "Overview": "concepts/integration.md"
-      - "Compute Mode":
-          - "Overview": "concepts/modes.md"
-          - "Local": "concepts/modes-implementations/local.md"
-          - "Local Container": "concepts/modes-implementations/local-container.md"
-          - "Demo Renderer": "concepts/modes-implementations/demo-renderer.md"
-  - "Command Line":
-      - "Options": "command-line.md"
-  - "Examples":
-      - "Overview": "examples.md"
-  - "Extensions":
-      - "Guide to Extensions": "extensions/extensions.md"
-  - "Releases": "RELEASES.md"
+      - "concepts/index.md"
+      - "Tasks": concepts/task.md
+      - "Pipeline": "concepts/pipeline.md"
+      - "Parameters": "concepts/parameters.md"
+      - "Catalog": "concepts/catalog.md"
+      - "Secrets": "concepts/secrets.md"
+      - "Parallel": "concepts/parallel.md"
+      - "Map": "concepts/map.md"
+  - "Reproducibility": "concepts/run-log.md"
+  - "Run pipeline":
+      - "configurations/overview.md"
+      - "Executor":
+          - "local": "configurations/executors/local.md"
+          # - "mocked": "configurations/executors/mocked.md"
+          # - "retry": "configurations/executors/mocked.md"
+          - "local-container": "configurations/executors/local-container.md"
+          - "argo workflows": "configurations/executors/argo.md"
+      - "Run log": "configurations/run-log.md"
+      - "Catalog": "configurations/catalog.md"
+      - "Secrets": "configurations/secrets.md"
+  - "Reference": "reference.md"

@@ -1,0 +1,101 @@
+on:
+  push:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "examples/**"
+    branches:
+      - "main"
+
+
+jobs:
+  PRCheck:
+    uses: "./.github/workflows/pr.yaml"
+
+  Release:
+    runs-on: ubuntu-latest
+    needs: PRCheck
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: "Set up Python"
+        run: uv python install
+      - run: |
+          uv sync --only-group release --frozen
+      - name: Figure version
+        continue-on-error: true
+        env:
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        id: last_tag
+        run: |
+          CURRENT=$(uv run semantic-release -v --noop version --print-last-released)
+          echo "Current: $CURRENT"
+
+          VERSION=$(uv run semantic-release -v --noop version --print)
+          echo "new: $VERSION"
+
+          if [ "$CURRENT" == "$VERSION" ]; then
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          exit 0
+
+      - name: Apply new tag
+        if: steps.last_tag.outcome == 'success'
+        env:
+          VERSION: ${{ steps.last_tag.outputs.version }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const {VERSION} = process.env
+            const tag = `refs/tags/${VERSION}`
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: tag,
+              sha: context.sha
+            })
+
+      - name: Publish to PyPI
+        if: steps.last_tag.outcome == 'success'
+        env:
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+          APPLY_TAG: ${{ steps.last_tag.outputs.version }}
+        run: |
+          uvx --from=toml-cli toml set --toml-path=pyproject.toml project.version $APPLY_TAG
+          uv build
+          uv publish --token $PYPI_TOKEN
+
+      - name: test_installation
+        if: steps.last_tag.outcome == 'success'
+        run: uv run --with runnable --no-project -- python -c "import runnable"
+
+      - name: "Create release"
+        if: steps.last_tag.outcome == 'success'
+        env:
+          RELEASE_TAG: ${{ steps.last_tag.outputs.version }}
+        uses: "actions/github-script@v6"
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          script: |
+            try {
+              const response = await github.rest.repos.createRelease({
+                draft: false,
+                generate_release_notes: true,
+                name: process.env.RELEASE_TAG,
+                owner: context.repo.owner,
+                prerelease: false,
+                repo: context.repo.repo,
+                tag_name: process.env.RELEASE_TAG,
+              });
+              core.exportVariable('RELEASE_ID', response.data.id);
+              core.exportVariable('RELEASE_UPLOAD_URL', response.data.upload_url);
+            } catch (error) {
+              core.setFailed(error.message);
+            }

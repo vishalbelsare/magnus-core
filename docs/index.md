@@ -1,52 +1,83 @@
+# Runnable
+
+<figure markdown>
+  ![Image title](assets/sport.png){ width="200" height="100"}
+  <figcaption>Orchestrate your functions, notebooks, scripts anywhere!!</figcaption>
+</figure>
+
+<span style="font-size:0.75em;">
+<a href="https://www.flaticon.com/free-icons/runner" title="runner icons">Runner icons created by Leremy - Flaticon</a>
+</span>
+
+
+<hr style="border:2px dotted orange">
+
+## Example
+
+The below data science flavored code is a well-known
+[iris example from scikit-learn](https://scikit-learn.org/stable/auto_examples/linear_model/plot_iris_logistic.html).
+
+
+```python linenums="1"
+--8<-- "examples/iris_demo.py"
+```
+
+
+1. Return two serialized objects X and Y.
+2. Store the file `iris_logistic.png` for future reference.
+3. Define the sequence of tasks.
+4. Define a pipeline with the tasks
+
+The difference between native driver and runnable orchestration:
+
+!!! tip inline end "Notebooks and Shell scripts"
+
+    You can execute notebooks and shell scripts too!!
+
+    They can be written just as you would want them, *plain old notebooks and scripts*.
+
+
+
+
+<div class="annotate" markdown>
+
+```diff
+
+- X, Y = load_data()
++load_data_task = PythonTask(
++    function=load_data,
++     name="load_data",
++     returns=[pickled("X"), pickled("Y")], (1)
++    )
+
+-logreg = model_fit(X, Y, C=1.0)
++model_fit_task = PythonTask(
++   function=model_fit,
++   name="model_fit",
++   returns=[pickled("logreg")],
++   )
+
+-generate_plots(X, Y, logreg)
++generate_plots_task = PythonTask(
++   function=generate_plots,
++   name="generate_plots",
++   terminate_with_success=True,
++   catalog=Catalog(put=["iris_logistic.png"]), (2)
++   )
+
+
++pipeline = Pipeline(
++   steps=[load_data_task, model_fit_task, generate_plots_task], (3)
+
+```
+</div>
+
+
 ---
-title: Welcome
-sidebarDepth: 0
----
 
+- [x] ```Domain``` code remains completely independent of ```driver``` code.
+- [x] The ```driver``` function has an equivalent and intuitive runnable expression
+- [x] Reproducible by default, runnable stores metadata about code/data/config for every execution.
+- [x] The pipeline is `runnable` in any environment.
 
-![logo](assets/logo1.png){ width="400" height="300" style="display: block; margin: 0 auto" }
-
----
-
-**Magnus** is a *thin* layer of abstraction over the underlying infrastructure to enable data scientist and
-machine learning engineers. It provides:
-
-- A way to execute Jupyter notebooks/python functions in local or remote platforms.
-- A framework to define complex pipelines via YAML or Python SDK.
-- Robust and *automatic* logging to ensure maximum reproducibility of experiments.
-- A framework to interact with secret managers ranging from environment variables to other vendors.
-- Interactions with various experiment tracking tools.
-
-## What does **thin** mean?
-
-- We really have no say in what happens within your notebooks or python functions.
-- We do not dictate how the infrastructure should be configured as long as it satisfies some *basic* criteria.
-    - The underlying infrastructure should support container execution and an orchestration framework.
-    - Some way to handle secrets either via environment variables or secrets manager.
-    - A blob storage or some way to store your intermediate artifacts.
-    - A database or blob storage to store logs.
-- We have no opinion of how your structure your project.
-- We do not creep into your CI/CD practices but it is your responsibility to provide the same environment where ever
-the execution happens. This is usually via git, virtual environment manager and docker[^1].
-- We transpile to the orchestration framework that is used by your teams to do the heavy lifting.
-
-## What does it do?
-
-
-![works](assets/work.png){ style="display: block; margin: 0 auto" }
-
-### Shift Left
-
-Magnus provides patterns typically used in production environments even in the development phase.
-
-- Reduces the need for code refactoring during production phase of the project.
-- Enables best practices and understanding of infrastructure patterns.
-- Run the same code on your local machines or in production environments.
-
-
-:sparkles::sparkles:Happy Experimenting!!:sparkles::sparkles:
-
-Please find the [github project here](https://github.com/AstraZeneca/magnus-core).
-
-[^1]: We believe that for successful data science projects need good engineering practices and we enable data science
-teams to follow them with ease.
+<hr style="border:2px dotted orange">

@@ -1,0 +1,11 @@
+pipeline-executor:
+  type: local # (1)
+
+run-log-store:
+  type: file-system
+
+catalog:
+  type: file-system # (3)
+
+secrets:
+  type: env-secrets # (4)

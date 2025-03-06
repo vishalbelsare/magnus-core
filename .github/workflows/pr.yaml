@@ -1,0 +1,53 @@
+on:
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "examples/**"
+      - "mkdocs.yml"
+    branches:
+      - "main"
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  PRCheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          # Download the binary
+          curl -sLO https://github.com/argoproj/argo-workflows/releases/download/v3.5.4/argo-linux-amd64.gz
+
+          # Unzip
+          gunzip argo-linux-amd64.gz
+
+          # Make binary executable
+          chmod +x argo-linux-amd64
+
+          # Move binary to path
+          mv ./argo-linux-amd64 /usr/local/bin/argo
+
+          # Test installation
+          argo version
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: "Set up Python"
+        run: uv python install
+
+      - name: Install the project
+        run: uv sync --all-extras --dev --frozen
+
+      - name: Run lint
+        # For example, using `flake8`
+        run: uvx ruff format
+
+      - name: Run tests
+        run: |
+          export PYTHONDONTWRITEBYTECODE=1
+          uv run pytest -k "not (container or minio)"
+
+      - name: mypy
+        run: uv run mypy runnable extensions
